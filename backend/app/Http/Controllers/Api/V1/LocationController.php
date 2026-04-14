@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Country;
-use App\Models\Region;
+use App\Http\Resources\v1\CountryResource;
+use App\Services\LocationService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -14,23 +14,20 @@ class LocationController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * List all countries.
-     */
-    public function countries(): JsonResponse
-    {
-        return $this->ok('Countries retrieved', [
-            'countries' => Country::select('id', 'name', 'code')->get(),
-        ]);
-    }
+    public function __construct(
+        private readonly LocationService $locationService
+    ) {}
 
     /**
-     * List all Tunisian regions.
+     * List all countries with their associated regions.
      */
-    public function regions(): JsonResponse
+    public function index(): JsonResponse
     {
-        return $this->ok('Regions retrieved', [
-            'regions' => Region::select('id', 'name')->get(),
-        ]);
+        $countries = $this->locationService->getCountriesWithRegions();
+
+        return $this->ok(
+            'Locations retrieved successfully',
+            CountryResource::collection($countries)
+        );
     }
 }

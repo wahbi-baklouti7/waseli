@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -18,11 +20,12 @@ use App\Notifications\ResetPasswordNotification;
     'last_name',
     'email',
     'phone',
+    'role', // Added role
     'password',
-    'residence_country_id',
-    'region_id',
-    'is_traveler',
+    'resident_country_id', // Renamed
+    'region_id',         // Renamed
     'is_verified',
+    'is_whatsapp_verified', // Added
     'trust_score',
     'status'
 ])]
@@ -42,13 +45,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_verified' => 'boolean',
+            'is_whatsapp_verified' => 'boolean',
+            'role' => UserRole::class, // Enum cast
         ];
     }
 
     /**
      * Send the email verification notification.
-     *
-     * @return void
      */
     public function sendEmailVerificationNotification(): void
     {
@@ -57,9 +61,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Send the password reset notification.
-     *
-     * @param string $token
-     * @return void
      */
     public function sendPasswordResetNotification($token): void
     {
@@ -67,39 +68,31 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the user's role based on their is_traveler value.
-     */
-    public function getRoleAttribute(): \App\Enums\UserRole
-    {
-        return $this->is_traveler ? \App\Enums\UserRole::CARRIER : \App\Enums\UserRole::BUYER;
-    }
-
-    /**
-     * Determine if the user is a buyer.
+     * Helper to check roles
      */
     public function isBuyer(): bool
     {
-        return ! $this->is_traveler;
+        return $this->role === UserRole::BUYER;
+    }
+
+    public function isCarrier(): bool
+    {
+        
+        return $this->role === UserRole::CARRIER;
     }
 
     /**
-     * Determine if the user is a carrier.
+     * Relationships
      */
-    public function isCarrier(): bool
+    public function residentCountry(): BelongsTo
     {
-        return $this->is_traveler;
+        return $this->belongsTo(Country::class, 'resident_country_id');
     }
 
-    public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function region(): BelongsTo
     {
-        return $this->belongsTo(Country::class, 'residence_country_id');
+        return $this->belongsTo(Region::class, 'region_id');
     }
-
-    public function region(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(Region::class, 'tunisian_city_id');
-    }
-
 
     /**
      * Mark the user's email as verified and update persistence.

@@ -27,9 +27,9 @@ final class AuthService
             'email' => $data['email'],
             'phone' => $data['phone'],
             'password' => Hash::make($data['password']),
-            'residence_country_id' => $data['residence_country_id'] ?? null,
-            'tunisian_city_id' => $data['tunisian_city_id'] ?? null,
-            'is_traveler' => isset($data['role']) && $data['role'] === UserRole::CARRIER->value,
+            'resident_country_id' => $data['resident_country_id'] ?? null,
+            'region_id' => $data['region_id'] ?? null,
+            'role' => $data['role'] ?? UserRole::BUYER->value,
             'status' => 'active',
         ]);
 

@@ -1,4 +1,4 @@
-# project_structure.md — Backend (Laravel 11)
+# project_structure.md — Backend (Laravel 13)
 
 ---
 
@@ -83,132 +83,124 @@ JSON Response
 
 # 🗄️ Database Schema (MVP)
 
-## 📋 1. Users
+### 🧠 1. Overview
 
-| Column        | Type            | Description                  |
-|--------------|-----------------|------------------------------|
-| id           | BIGINT (PK)     | Unique user ID               |
-| first_name         | VARCHAR         | User first name               |
-| last_name         | VARCHAR         | User last name               |
-| email        | VARCHAR UNIQUE  | User email                   |
-| phone        | VARCHAR UNIQUE  | WhatsApp number              |
-| password        | VARCHAR UNIQUE  | password              |
-| residence_country        | BIGINT (FK)  | country(id)              |
-| tunisian_city       | BIGINT (FK)   | region(id)              |
-| is_traveler  | BOOLEAN         | Can act as traveler          |
-| is_verified  | BOOLEAN         | WhatsApp verified            |
-| trust_score  | INTEGER         | Reputation score             |
-| status       | ENUM            | active / banned              |
-| created_at   | TIMESTAMP       | Created time                 |
-| updated_at   | TIMESTAMP       | Updated time                 |
+The system operates as a **two-sided logistics marketplace** connecting carriers and buyers:
+
+*   **🚚 Carriers**: Create and manage **Trips** (routes they are traveling).
+*   **👤 Buyers**:
+    *   **Apply to Trips**: Express interest in an existing carrier's trip (`trip_requests`).
+    *   **Post Delivery Needs**: Create requests for items they need delivered (`delivery_requests`).
+*   **🔁 Matching**: Carriers can also apply to buyer-created requests (`request_applications`).
 
 ---
 
----
+### 🧱 2. Database Schema
 
-## 🌍 2. Countries
+#### 👤 Users & Locations
+| Table | Field | Type/Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| **users** | `id` | PK | Unique identifier |
+| | `first_name` | string | |
+| | `last_name` | string | |
+| | `email` | string (unique) | |
+| | `phone` | string | |
+| | `role` | enum | `buyer`, `carrier` |
+| | `resident_country_id`| FK → countries.id | |
+| | `region_id` | FK → regions.id | |
+| | `email_confirmed_at` | timestamp | |
+| | `is_verified` | boolean | |
+| | `is_whatsapp_verified`| boolean | |
+| **countries** | `id` | PK | |
+| | `name` | string | |
+| **regions** | `id` | PK | |
+| | `name` | string | |
+| | `country_id` | FK → countries.id | |
 
-| Column      | Type        | Description        |
-|------------|------------|--------------------|
-| id         | BIGINT (PK) | Country ID         |
-| name       | VARCHAR     | Country name       |
-| code       | VARCHAR     | Country code (ISO) |
-| created_at | TIMESTAMP   | Created time       |
+#### 📦 Catalog & Logistics
+| Table | Field | Type/Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| **categories** | `id` | PK | Item categories (e.g., Electronics, Food) |
+| | `name` | string | |
+| **trips** | `id` | PK | |
+| | `carrier_id` | FK → users.id | The carrier performing the trip |
+| | `departed_country_id`| FK → countries.id | Starting point |
+| | `arrival_city_id` | FK → regions.id | Destination |
+| | `arrival_date` | date | Estimated arrival |
+| | `status` | enum | `open`, `in_progress`, `completed` |
 
----
-
-## 📍 3. Regions (Tunisia)
-
-| Column      | Type        | Description                  |
-|------------|------------|------------------------------|
-| id         | BIGINT (PK) | Region ID                    |
-| name       | VARCHAR     | Region name (Tunis, Sfax…)   |
-| created_at | TIMESTAMP   | Created time                 |
-
----
-
-## ✈️ 4. Trips
-
-| Column             | Type        | Description                  |
-|--------------------|------------|------------------------------|
-| id                 | BIGINT (PK) | Trip ID                      |
-| user_id            | BIGINT (FK) | Traveler (users.id)          |
-| departure_country  | BIGINT (FK) | country(id)                  |
-| arrival_city       | BIGINT (FK) | region(id)                   |
-| arrival_date       | DATE        | Arrival date                 |
-| notes              | TEXT        | Optional details             |
-| status             | ENUM        | active / completed / cancelled |
-| created_at         | TIMESTAMP   | Created time                 |
-| updated_at         | TIMESTAMP   | Updated time                 |
-
----
-
-## 📦 5. Contact Requests
-
-| Column        | Type        | Description                          |
-|--------------|------------|--------------------------------------|
-| id           | BIGINT (PK) | Request ID                           |
-| user_id      | BIGINT (FK) | Buyer (users.id)                     |
-| traveler_id  | BIGINT (FK) | Traveler (users.id)                  |
-| trip_id      | BIGINT (FK) | Related trip                         |
-| message      | TEXT        | Request details                      |
-| status       | ENUM        | pending / accepted / rejected / delivered / reviewed |
-| created_at   | TIMESTAMP   | Created time                         |
-| updated_at   | TIMESTAMP   | Updated time                         |
-
----
-
-## ⭐ 6. Reviews
-
-| Column        | Type        | Description                  |
-|--------------|------------|------------------------------|
-| id           | BIGINT (PK) | Review ID                    |
-| request_id   | BIGINT (FK) | Related request              |
-| reviewer_id  | BIGINT (FK) | User who reviewed            |
-| traveler_id  | BIGINT (FK) | Traveler being reviewed      |
-| rating       | INTEGER     | 1–5 stars                    |
-| comment      | TEXT        | Optional feedback            |
-| created_at   | TIMESTAMP   | Created time                 |
+#### 🤝 Marketplace Transactions
+| Table | Field | Type/Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| **delivery_requests** | `id` | PK | Buyer-posted delivery needs |
+| | `buyer_id` | FK → users.id | |
+| | `arrival_city_id` | FK → regions.id | |
+| | `category_id` | FK → categories.id | |
+| | `date` | date | Desired delivery date |
+| **trip_requests** | `id` | PK | **Core Table**: Applications from buyers to trips |
+| | `trip_id` | FK → trips.id | |
+| | `buyer_id` | FK → users.id | |
+| | `status` | enum | `pending`, `accepted`, `rejected` |
+| | `delivery_code` | string | Secure code for delivery verification |
+| | `package_status` | enum | `waiting`, `picked_up`, `delivered` |
+| **request_applications**| `id` | PK | Applications from carriers to delivery requests |
+| | `request_id` | FK → delivery_requests.id| |
+| | `carrier_id` | FK → users.id | |
+| | `status` | enum | `pending`, `accepted`, `rejected` |
 
 ---
 
-## 🔐 7. Verifications
+### 🔗 3. Relationships
 
-| Column      | Type        | Description                  |
-|------------|------------|------------------------------|
-| id         | BIGINT (PK) | Verification ID              |
-| user_id    | BIGINT (FK) | User                         |
-| code       | VARCHAR     | Verification code            |
-| status     | ENUM        | pending / verified           |
-| created_at | TIMESTAMP   | Created time                 |
+#### 👤 User Relations
+*   **One User** has many **Trips** (as Carrier).
+*   **One User** has many **Delivery Requests** (as Buyer).
+*   **One User** has many **Trip Requests** (as Buyer applied to a Trip).
+*   **One User** has many **Request Applications** (as Carrier applied to a Delivery Request).
 
----
+#### 🚚 Logistics Relations
+*   **Trip**:
+    *   Belongs to one **Carrier** (User).
+    *   Has many **Trip Requests**.
+    *   Belongs to one **Departure Country** and one **Arrival Region**.
+*   **Delivery Request**:
+    *   Belongs to one **Buyer** (User).
+    *   Belongs to one **Region** and one **Category**.
+    *   Has many **Request Applications**.
 
-## 🚨 8. Flags (Optional)
-
-| Column      | Type        | Description                  |
-|------------|------------|------------------------------|
-| id         | BIGINT (PK) | Flag ID                      |
-| user_id    | BIGINT (FK) | Suspicious user              |
-| reason     | TEXT        | Reason                       |
-| created_by | BIGINT      | Admin ID                     |
-| created_at | TIMESTAMP   | Created time                 |
-
----
-
-# 🔗 Relationships
-
-- users → trips (1:N)
-- users → contact_requests (buyer & traveler)
-- trips → contact_requests (1:N)
-- contact_requests → reviews (1:1)
-- users → reviews (1:N)
+#### 🤝 Transaction Relations
+*   **Trip Request**: Link between one **Trip** and one **Buyer**.
+    > [!NOTE]
+    > Each row represents "One package/service instance within a trip".
+*   **Request Application**: Link between one **Delivery Request** and one **Carrier**.
 
 ---
 
-# 🔄 Core Flow
+### ⚙️ 4. Core Business Logic
 
-User → Request → Accepted → Delivered → Reviewed → Trust Score Updated
+#### 🔵 Flow 1: Buyer → Trip (Apply to existing trip)
+1.  **Apply**: Buyer browsing trips → applies to a specific **Trip**.
+2.  **Request**: `trip_requests` record created (Status: `pending`).
+3.  **Approve**: Carrier reviews and accepts the request (Status: `accepted`).
+4.  **Confirm**: System generates a `delivery_code`.
+5.  **Deliver**: Carrier updates `package_status` (waiting → picked_up → delivered).
+
+#### 🟢 Flow 2: Carrier → Request (Bid on delivery need)
+1.  **Bid**: Carrier browsing delivery requests → applies to a specific **Delivery Request**.
+2.  **Application**: `request_applications` record created (Status: `pending`).
+3.  **Approve**: Buyer reviews and accepts the bid (Status: `accepted`).
+4.  **Execute**: Fulfillment process begins.
+
+---
+
+### 📊 5. State System
+
+| Entity | Field | State Flow |
+| :--- | :--- | :--- |
+| **Trip Request** | `status` | `pending` ➔ `accepted` OR `rejected` |
+| **Trip Request** | `package_status` | `waiting` ➔ `picked_up` ➔ `delivered` |
+| **Trip** | `status` | `open` ➔ `in_progress` ➔ `completed` |
+
 
 
 

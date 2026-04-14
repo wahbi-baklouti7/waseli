@@ -13,14 +13,16 @@ return new class extends Migration
     {
         Schema::create('countries', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('code', 3)->nullable();
+            $table->string('name')->unique();
+            $table->string('code', 2)->unique();
             $table->timestamps();
         });
 
         Schema::create('regions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('country_id')->constrained()->cascadeOnDelete();
             $table->string('name');
+            $table->unique(['country_id', 'name']);
             $table->timestamps();
         });
 
@@ -30,11 +32,12 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('email')->unique();
             $table->string('phone')->unique();
+            $table->string('role')->default('buyer');
             $table->string('password');
-            $table->foreignId('residence_country_id')->nullable()->constrained('countries');
-            $table->foreignId('tunisian_city_id')->nullable()->constrained('regions');
-            $table->boolean('is_traveler')->default(false);
+            $table->foreignId('resident_country_id')->nullable()->constrained('countries')->nullOnDelete();
+            $table->foreignId('region_id')->nullable()->constrained('regions')->nullOnDelete();
             $table->boolean('is_verified')->default(false);
+            $table->boolean('is_whatsapp_verified')->default(false);
             $table->integer('trust_score')->default(0);
             $table->string('status')->default('active'); // active / banned
             $table->timestamp('email_verified_at')->nullable();

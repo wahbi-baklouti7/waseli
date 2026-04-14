@@ -33,8 +33,8 @@ final class RegisterRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20', 'unique:users'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)],
             'role' => ['required', Rule::enum(UserRole::class)],
-            'residence_country_id' => ['required_if:role,carrier' , 'exists:countries,id'],
-            'tunisian_city_id' => ['required_if:role,buyer' , 'exists:regions,id'],
+            'resident_country_id' => ['required_if:role,carrier', 'exists:countries,id'],
+            'region_id' => ['required_if:role,buyer', 'exists:regions,id'],
         ];
     }
 }

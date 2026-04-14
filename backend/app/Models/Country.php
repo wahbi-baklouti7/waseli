@@ -15,8 +15,13 @@ final class Country extends Model
     /** @use HasFactory<\Database\Factories\CountryFactory> */
     use HasFactory;
 
+    public function regions(): HasMany
+    {
+        return $this->hasMany(Region::class);
+    }
+
     public function users(): HasMany
     {
-        return $this->hasMany(User::class, 'residence_country_id');
+        return $this->hasMany(User::class, 'resident_country_id');
     }
 }
